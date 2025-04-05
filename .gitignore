@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+
+# Optional: ignore build if you later compile or transpile
+dist/
+build/
+
+# Optional: if you add Docker
+docker-compose.override.yml
+.env.local
+.env.*.local
+
+# Optional: ignore database dumps
+dump*.gz
+*.mongodb
