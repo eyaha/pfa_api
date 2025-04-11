@@ -11,5 +11,8 @@ const generateRefreshToken = (userId) => {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRES
   });
 };
+ const generateResetCode = () => {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+};
 
-export { generateAccessToken, generateRefreshToken };
+export { generateAccessToken, generateRefreshToken , generateResetCode };
