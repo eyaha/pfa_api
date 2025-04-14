@@ -249,7 +249,6 @@ export const requestPasswordReset = async (req, res) => {
     
     await user.save();
     await sendResetCodeEmail(user.email, resetCode);
-
     res.status(200).json({ 
       success: true,
       message: 'Code de réinitialisation envoyé'
@@ -398,3 +397,38 @@ export const resetPassword = async (req, res) => {
     });
   }
 };
+export const getEmailByCode = async (req, res) => {
+  const { code } = req.params;
+  try {
+    const user = await User.findOne({ resetPasswordCode: code });
+    if (!user) {
+      return res.status(400).json({
+        error: {
+          details: {
+            errors: [{
+              message: "Code invalide",
+              path: ["code"]
+            }]
+          }
+        }
+      });
+    }
+    res.status(200).json({
+      success: true,
+      email: user.email,
+      message: "Email trouvé"
+    })
+  } catch (err) {
+    console.error("Email by code error:", err);
+    res.status(500).json({
+      error: {
+        details: {
+          errors: [{
+            message: "Erreur serveur",
+            path: ["toast"]
+          }]
+        }
+      }
+    });
+  }
+}
