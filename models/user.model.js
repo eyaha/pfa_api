@@ -5,7 +5,15 @@ const userSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  refreshToken: { type: String }
+  refreshToken: { type: String },
+  resetPasswordCode: {
+    type: String,
+    default: null
+  },
+  resetPasswordCodeExpires: {
+    type: Date,
+    default: null
+  }
 });
 
 userSchema.pre('save', async function (next) {
