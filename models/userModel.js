@@ -13,7 +13,18 @@ const userSchema = new mongoose.Schema({
   resetPasswordCodeExpires: {
     type: Date,
     default: null
-  }
+  },
+  preferences: {
+    preferredProvider: {
+      type: String,
+      enum: ["stablediffusion","kieai","gemini","photai"], // Add more providers as needed
+      default: 'auto',
+    },
+    prioritizeFree: {
+      type: Boolean,
+      default: true,
+    },
+  },
 });
 
 userSchema.pre('save', async function (next) {

@@ -1,7 +1,7 @@
-import User from '../models/user.model.js';
+import User from '../models/userModel.js';
 import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken, generateResetCode } from '../utils/generateTokens.js';
-import { loginSchema, passwordResetSchema, registerSchema, verifyCodeSchema } from '../schemas/authSchema.js';
+import { loginSchema, registerSchema, verifyCodeSchema } from '../schemas/authSchema.js';
 import { sendResetCodeEmail } from '../utils/emailSender.js';
 
 export const register = async (req, res) => {

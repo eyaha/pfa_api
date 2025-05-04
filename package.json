@@ -13,9 +13,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google/genai": "^0.12.0",
+    "@gradio/client": "^1.14.2",
     "@sendgrid/mail": "^8.1.5",
     "@types/redis": "^4.0.10",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.6.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -23,6 +26,8 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.2",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.97.0",
     "redis": "^4.7.0"
   },
   "devDependencies": {

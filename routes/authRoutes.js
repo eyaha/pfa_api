@@ -1,6 +1,6 @@
 import express from 'express';
-import { verifyAccessToken } from '../middlewares/auth.middleware.js';
-import { getEmailByCode, login, logout, refresh, register, requestPasswordReset, resetPassword, verifyResetCode } from '../controllers/auth.controller.js';
+import { getEmailByCode, login, logout, refresh, register, requestPasswordReset, resetPassword, verifyResetCode } from '../controllers/authController.js';
+import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ router.post('/verify-code', verifyResetCode);       // → Vérifie et retourne 
 router.post('/confirm-reset', resetPassword);
 router.get('/get-user-email/:code', getEmailByCode);
 // Route protégée
-router.get('/me', verifyAccessToken, (req, res) => {
+router.get('/me', protect, (req, res) => {
   res.json({ message: 'Access granted', user: req.user });
 });
 
