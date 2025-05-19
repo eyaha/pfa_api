@@ -143,40 +143,40 @@ export const login = async (req, res) => {
 
 export const refresh = async (req, res) => {
   const token = req.cookies.refreshToken;
-  
+
   if (!token) {
-    return res.status(401).json({ 
+    return res.status(401).json({
       success: false,
-      message: 'Aucun token fourni' 
+      message: "Aucun token fourni",
     });
   }
 
   try {
     const payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
     const user = await User.findById(payload.userId);
-    
+
     if (!user || user.refreshToken !== token) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: 'Token invalide' 
+        message: "Token invalide ou révoqué",
       });
     }
 
     const newAccessToken = generateAccessToken(user._id);
-    
-    res.json({ 
-      success: true,
-      accessToken: newAccessToken 
-    });
 
+    return res.status(200).json({
+      success: true,
+      accessToken: newAccessToken,
+    });
   } catch (err) {
-    console.error('Refresh token error:', err);
-    res.status(403).json({ 
+    console.error("Erreur lors du refresh token :", err.message);
+    return res.status(403).json({
       success: false,
-      message: 'Token invalide ou expiré'
+      message: "Token invalide ou expiré",
     });
   }
 };
+
 
 export const logout = async (req, res) => {
   try {

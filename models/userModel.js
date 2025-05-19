@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
   preferences: {
     preferredProvider: {
       type: String,
-      enum: ["stablediffusion","kieai","gemini","photai"], // Add more providers as needed
+      enum: ["stablediffusion","kieai","gemini","photai","auto"], // Add more providers as needed
       default: 'auto',
     },
     prioritizeFree: {

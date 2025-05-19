@@ -6,7 +6,7 @@ import { selectProvider } from "../services/providerSelectionService.js";
 import ImageHistory from "../models/ImageHistory.js";
 import ProviderConfig from "../models/ProviderConfig.js";
 
-const MAX_RETRIES = 3; // Maximum number of providers to try
+const MAX_RETRIES = 4; // Maximum number of providers to try
 
 // @desc    Generate an image using the best available provider with fallback
 // @route   POST /api/images/generate

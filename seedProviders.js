@@ -30,8 +30,8 @@ const seedProviders = async () => {
         apiKeyEnvVar: 'STABLE_DIFFUSION_API_KEY',
         isFreeTier: true,
         isActive: true,
-        quotaLimit: { credits: 100 },
-        costPerRequest: 8,
+        quotaLimit: { credits: 25 },
+        costPerRequest: 0.9,
         costUnit: 'credits',
       },
       {
@@ -41,9 +41,9 @@ const seedProviders = async () => {
         apiKeyEnvVar: 'KIEAI_API_KEY',
         isFreeTier: true,
         isActive: true,
-        quotaLimit: { requests: 100 }, // Ajoute un quota fictif si besoin
+        quotaLimit: { credits: 50 }, // Ajoute un quota fictif si besoin
         costPerRequest: 6, // Si gratuit pour l’instant
-        costUnit: 'USD',
+        costUnit: 'credits',
       },
       // {
       //   name: 'gemini',
@@ -52,8 +52,8 @@ const seedProviders = async () => {
       //   apiKeyEnvVar: 'GEMINI_API_KEY',
       //   isFreeTier: true,
       //   isActive: true,
-      //   quotaLimit: { requests: 60 }, // Exemple : 60 requêtes/min en free tier
-      //   costPerRequest: 10, // Gratuit jusqu’au quota
+      //   quotaLimit: { requests: 10 }, // Exemple : 60 requêtes/min en free tier
+      //   costPerRequest: 0, // Gratuit jusqu’au quota
       //   costUnit: 'USD',
       // },
       {
@@ -63,9 +63,9 @@ const seedProviders = async () => {
         apiKeyEnvVar: 'PHOTAI_API_KEY',
         isFreeTier: true,
         isActive: true,
-        quotaLimit: { requests: 100 }, // exemple fictif
-        costPerRequest: 10, // gratuit sur quota
-        costUnit: 'USD',
+        quotaLimit: { requests: 25 }, // exemple fictif
+        costPerRequest: 1, // gratuit sur quota
+        costUnit: 'credits',
       }
     ];
 
