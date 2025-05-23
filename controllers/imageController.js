@@ -32,7 +32,7 @@ export const createImage = async (req, res) => {
     }
     console.log("userPreferences",user);
     const userPreferences = user.preferences;
-
+    let providerTransitions = [];
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       // 1. Select Provider
       const selectedProviderConfig = await selectProvider(userPreferences, attemptedProviders);
@@ -45,6 +45,7 @@ export const createImage = async (req, res) => {
 
       const selectedProviderName = selectedProviderConfig.name;
       attemptedProviders.push(selectedProviderName);
+      providerTransitions.push(`Tentative ${attempt + 1}: ${selectedProviderName}`);
       console.log(`Tentative ${attempt + 1}/${MAX_RETRIES}: Essai avec le fournisseur ${selectedProviderName}`);
 
       // 2. Create/Update History Record
@@ -82,6 +83,7 @@ export const createImage = async (req, res) => {
         res.status(201).json({
           message: `Image générée avec succès en utilisant ${selectedProviderName}`,
           data: history,
+          providerTransitions
         });
         break; // Exit loop on success
 
