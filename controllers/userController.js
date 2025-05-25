@@ -29,45 +29,36 @@ export const getUserPreferences = async (req, res) => {
 // @access  Private
 export const updateUserPreferences = async (req, res) => {
   const { preferredProvider, prioritizeFree } = req.body;
-  const userId = req.user.id;
+  const allowedProviders = ['auto', 'stablediffusion', 'kieai', 'gemini', 'photai'];
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
 
-    if (!user) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
-    }
-
-    // Validate inputs (basic validation)
-    const allowedProviders = ["stablediffusion", "auto"];
-    if (preferredProvider !== undefined && !allowedProviders.includes(preferredProvider)) {
-        return res.status(400).json({ message: `Fournisseur préféré invalide. Doit être l'un de : ${allowedProviders.join(", ")}` });
-    }
-    if (prioritizeFree !== undefined && typeof prioritizeFree !== "boolean") {
-        return res.status(400).json({ message: "prioritizeFree doit être un booléen." });
+    if (preferredProvider && !allowedProviders.includes(preferredProvider)) {
+      return res.status(400).json({
+        message: `Fournisseur préféré invalide. Choisissez parmi : ${allowedProviders.join(", ")}`,
+      });
     }
 
-    // Update preferences
-    if (preferredProvider !== undefined) {
-      user.preferences.preferredProvider = preferredProvider;
-    }
-    if (prioritizeFree !== undefined) {
-      user.preferences.prioritizeFree = prioritizeFree;
+    if (prioritizeFree !== undefined && typeof prioritizeFree !== 'boolean') {
+      return res.status(400).json({ message: "prioritizeFree doit être un booléen." });
     }
 
-    const updatedUser = await user.save();
+    if (preferredProvider !== undefined) user.preferences.preferredProvider = preferredProvider;
+    if (prioritizeFree !== undefined) user.preferences.prioritizeFree = prioritizeFree;
+
+    await user.save();
+console.log("succes");
 
     res.json({
       message: "Préférences utilisateur mises à jour avec succès",
-      preferences: updatedUser.preferences,
+      preferences: user.preferences,
     });
   } catch (error) {
-    console.error("Erreur lors de la mise à jour des préférences:", error);
-    // Handle potential validation errors from Mongoose
-    if (error.name === 'ValidationError') {
-        return res.status(400).json({ message: "Erreur de validation", errors: error.errors });
-    }
+    console.error("Erreur mise à jour préférences:", error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
+
 

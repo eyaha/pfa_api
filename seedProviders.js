@@ -25,29 +25,29 @@ const seedProviders = async () => {
     const providersToSeed = [
       {
         name: 'stablediffusion',
-        displayName: 'Stable Diffusion XL (Stability AI)',
+        displayName: 'Stable Diffusion',
         apiBaseUrl: 'https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image',
         apiKeyEnvVar: 'STABLE_DIFFUSION_API_KEY',
         isFreeTier: true,
         isActive: true,
-        quotaLimit: { credits: 25 },
+        quotaLimit: { credits: 27 },
         costPerRequest: 0.9,
         costUnit: 'credits',
       },
       {
         name: 'kieai',
-        displayName: 'KieAI GPT4o',
+        displayName: 'GPT4o',
         apiBaseUrl: 'https://kieai.erweima.ai/api/v1/gpt4o-image',
         apiKeyEnvVar: 'KIEAI_API_KEY',
         isFreeTier: true,
         isActive: true,
-        quotaLimit: { credits: 50 }, // Ajoute un quota fictif si besoin
+        quotaLimit: { credits: 8 }, // Ajoute un quota fictif si besoin
         costPerRequest: 6, // Si gratuit pour l’instant
         costUnit: 'credits',
       },
       // {
       //   name: 'gemini',
-      //   displayName: 'Gemini (Google GenAI)',
+      //   displayName: 'Gemini',
       //   apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta', // Note : endpoint indicatif, car Gemini utilise SDK
       //   apiKeyEnvVar: 'GEMINI_API_KEY',
       //   isFreeTier: true,
