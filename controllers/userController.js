@@ -30,7 +30,7 @@ export const getUserPreferences = async (req, res) => {
 export const updateUserPreferences = async (req, res) => {
   const { preferredProvider, prioritizeFree } = req.body;
   const allowedProviders = ['auto', 'stablediffusion', 'kieai', 'gemini', 'photai'];
-
+console.log("preferredProvider:", preferredProvider);
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
@@ -49,8 +49,6 @@ export const updateUserPreferences = async (req, res) => {
     if (prioritizeFree !== undefined) user.preferences.prioritizeFree = prioritizeFree;
 
     await user.save();
-console.log("succes");
-
     res.json({
       message: "Préférences utilisateur mises à jour avec succès",
       preferences: user.preferences,

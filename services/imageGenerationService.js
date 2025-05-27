@@ -77,7 +77,7 @@ const generateWithStableDiffusion = async (prompt, parameters) => {
       }
     );
 
-    console.log("[DEBUG] Stability AI Response Body:", JSON.stringify(response.data, null, 2));
+    // console.log("[DEBUG] Stability AI Response Body:", JSON.stringify(response.data, null, 2));
 
     const base64Image = response.data.artifacts[0]?.base64;
     if (!base64Image) throw new Error("Aucune donnée base64 trouvée dans la réponse de l'API.");

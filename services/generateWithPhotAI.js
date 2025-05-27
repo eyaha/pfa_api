@@ -69,7 +69,7 @@ export async function generateWithPhotAI(prompt, parameters = {}) {
 
       const imageUrl = statusResponse.data?.data?.output_urls?.[0];
       if (imageUrl) {
-        console.log(`✅ Image Phot.AI récupérée : ${imageUrl}`);
+        // console.log(`✅ Image Phot.AI récupérée : ${imageUrl}`);
 
         // Étape 3 : Upload Cloudinary
         const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
