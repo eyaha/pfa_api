@@ -30,38 +30,28 @@ export const createImage = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
-    console.log("userPreferences", user);
+
     const userPreferences = user.preferences;
+    const preferredProvider = userPreferences?.preferredProvider || null;
     let providerTransitions = [];
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      // 1. Select Provider
       const selectedProviderConfig = await selectProvider(
         userPreferences,
         attemptedProviders
       );
 
       if (!selectedProviderConfig) {
-        lastError = new Error(
-          "Aucun fournisseur approprié disponible après tentatives."
-        );
-        console.log(lastError.message);
-        break; // Exit loop if no provider can be selected
+        lastError = new Error("Aucun fournisseur approprié disponible après tentatives.");
+        await logStep(history?._id, `⛔ Aucun fournisseur disponible après ${attempt} tentatives.`);
+        break;
       }
 
       const selectedProviderName = selectedProviderConfig.name;
       attemptedProviders.push(selectedProviderName);
-      providerTransitions.push(
-        `Tentative ${attempt + 1}: ${selectedProviderName}`
-      );
-      console.log(
-        `Tentative ${
-          attempt + 1
-        }/${MAX_RETRIES}: Essai avec le fournisseur ${selectedProviderName}`
-      );
+      providerTransitions.push(`Tentative ${attempt + 1}: ${selectedProviderName}`);
 
-      // 2. Create/Update History Record
       if (!history) {
-        // Create on first attempt
         history = new ImageHistory({
           user: userId,
           prompt,
@@ -69,15 +59,17 @@ export const createImage = async (req, res) => {
           providerUsed: selectedProviderName,
           status: "pending",
         });
+        await history.save();
+        await logStep(history._id, `📥 Génération demandée avec prompt: "${prompt}"`);
       } else {
-        // Update provider on retry
         history.providerUsed = selectedProviderName;
         history.status = "pending";
-        history.errorMessage = null; // Clear previous error
+        history.errorMessage = null;
+        await history.save();
       }
-      await history.save();
 
-      // 3. Attempt Generation
+      await logStep(history._id, `🔄 Tentative ${attempt + 1} avec ${selectedProviderName}`);
+
       try {
         const result = await generateImage(
           selectedProviderName,
@@ -85,80 +77,64 @@ export const createImage = async (req, res) => {
           parameters
         );
 
-        // 4. Handle Success
         history.imageUrl = result.imageUrl;
         history.status = "completed";
-        // history.cost = result.cost; // Optional cost tracking
         await history.save();
 
-        // Increment usage count (consider moving this to generateImage service)
         await ProviderConfig.updateOne(
           { name: selectedProviderName },
           { $inc: { usageCount: 1 } }
         );
+
+        await logStep(history._id, `✅ Image générée avec ${selectedProviderName}`);
+
         success = true;
-        res.status(201).json({
+        return res.status(201).json({
           message: `Image générée avec succès en utilisant ${selectedProviderName}`,
           data: history,
           providerTransitions,
+          preferredProvider,
+          providerUsed: selectedProviderName,
+          historyId: history._id,
         });
-        break; // Exit loop on success
       } catch (generationError) {
-        // 5. Handle Generation Failure
-        console.error(
-          `Échec de la génération avec ${selectedProviderName}:`,
-          generationError.message
-        );
-        lastError = generationError; // Store the error from this attempt
+        console.error(`Échec avec ${selectedProviderName}:`, generationError.message);
+        lastError = generationError;
         history.status = "failed";
         history.errorMessage = generationError.message;
         await history.save();
 
-        // Continue loop to try the next provider
-        console.log("Tentative avec le prochain fournisseur disponible...");
+        await logStep(history._id, `❌ Échec avec ${selectedProviderName}: ${generationError.message}`);
       }
     }
 
-    // 6. Handle Final Failure (if loop finishes without success)
     if (!success) {
-      const finalMessage = `Échec de la génération d'image après avoir essayé ${attemptedProviders.length} fournisseur(s).`;
-      console.error(
-        finalMessage,
-        lastError
-          ? lastError.message
-          : "Aucun fournisseur n'a pu être sélectionné."
-      );
-      res.status(500).json({
+      const finalMessage = `Échec après ${attemptedProviders.length} tentative(s).`;
+      await logStep(history?._id, `⛔ Fin de la génération: ${finalMessage}`);
+      return res.status(500).json({
         message: finalMessage,
-        error: lastError
-          ? lastError.message
-          : "Aucun fournisseur disponible ou tous ont échoué.",
-        attemptedProviders: attemptedProviders,
-        historyId: history ? history._id : null, // Provide history ID for reference
+        error: lastError?.message || "Tous les fournisseurs ont échoué.",
+        attemptedProviders,
+        historyId: history ? history._id : null,
+        preferredProvider,
       });
     }
   } catch (error) {
-    // Handle errors outside the generation loop (e.g., finding user, saving history initially)
-    console.error("Erreur inattendue dans le contrôleur createImage:", error);
-    // Ensure history status reflects failure if applicable
+    console.error("Erreur inattendue:", error);
     if (history && history.status === "pending") {
       history.status = "failed";
-      history.errorMessage =
-        "Erreur serveur inattendue avant la tentative de génération.";
+      history.errorMessage = "Erreur serveur inattendue.";
       try {
         await history.save();
+        await logStep(history._id, `❌ Erreur serveur inattendue: ${error.message}`);
       } catch (saveError) {
-        console.error(
-          "Échec de la mise à jour de l'historique après une erreur:",
-          saveError
-        );
+        console.error("Erreur lors de la sauvegarde du statut échoué:", saveError);
       }
     }
-    res
-      .status(500)
-      .json({ message: "Erreur serveur interne", error: error.message });
+    res.status(500).json({ message: "Erreur serveur interne", error: error.message });
   }
 };
+
 
 // @desc    Get image generation history for the logged-in user
 // @route   GET /api/images/history
@@ -283,4 +259,5 @@ export const getDashboardStats = async (userId) => {
 
 // Need to import mongoose for ObjectId validation
 import mongoose from "mongoose";
-import User from "../models/userModel.js";
+import User from "../models/userModel.js";import { logStep } from "../models/GenerationLog.js";
+

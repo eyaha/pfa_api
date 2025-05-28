@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import imageRoutes from "./routes/imageRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import providerConfigRoutes from "./routes/providerConfigRoutes.js";
+import imageLogsRoutes from './routes/imageLogs.js';
 // Load environment variables
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use("/api/images", imageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/providers", providerConfigRoutes);
+app.use('/api', imageLogsRoutes);
 // Database connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ Database connected successfully'))
