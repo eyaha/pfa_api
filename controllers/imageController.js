@@ -20,22 +20,52 @@ export const createImage = async (req, res) => {
     return res.status(400).json({ message: "Le prompt est requis" });
   }
 
+  // Configuration SSE
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // Fonction pour envoyer des logs en temps réel
+  const sendLog = (step, data = {}) => {
+    const logData = {
+      step,
+      timestamp: new Date().toISOString(),
+      ...data
+    };
+    res.write(`data: ${JSON.stringify(logData)}\n\n`);
+  };
+
   let history = null;
   const attemptedProviders = [];
   let lastError = null;
   let success = false;
 
   try {
+    sendLog('start', { message: '🚀 Début de la génération d\'image', prompt });
+
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
+      sendLog('error', { message: 'Utilisateur non trouvé' });
+      res.write(`data: ${JSON.stringify({ step: 'end', success: false })}\n\n`);
+      return res.end();
     }
+
+    sendLog('user_found', { message: '👤 Utilisateur trouvé', userId });
 
     const userPreferences = user.preferences;
     const preferredProvider = userPreferences?.preferredProvider || null;
     let providerTransitions = [];
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      sendLog('provider_selection', { 
+        message: `🔍 Sélection du fournisseur (tentative ${attempt + 1}/${MAX_RETRIES})`,
+        attempt: attempt + 1 
+      });
+
       const selectedProviderConfig = await selectProvider(
         userPreferences,
         attemptedProviders
@@ -43,13 +73,22 @@ export const createImage = async (req, res) => {
 
       if (!selectedProviderConfig) {
         lastError = new Error("Aucun fournisseur approprié disponible après tentatives.");
-        await logStep(history?._id, `⛔ Aucun fournisseur disponible après ${attempt} tentatives.`);
+        sendLog('no_provider', { 
+          message: `⛔ Aucun fournisseur disponible après ${attempt + 1} tentatives`,
+          attemptedProviders 
+        });
         break;
       }
 
       const selectedProviderName = selectedProviderConfig.name;
       attemptedProviders.push(selectedProviderName);
       providerTransitions.push(`Tentative ${attempt + 1}: ${selectedProviderName}`);
+
+      sendLog('provider_selected', { 
+        message: `🎯 Fournisseur sélectionné: ${selectedProviderName}`,
+        provider: selectedProviderName,
+        attempt: attempt + 1
+      });
 
       if (!history) {
         history = new ImageHistory({
@@ -60,15 +99,29 @@ export const createImage = async (req, res) => {
           status: "pending",
         });
         await history.save();
-        await logStep(history._id, `📥 Génération demandée avec prompt: "${prompt}"`);
+        
+        sendLog('history_created', { 
+          message: `📝 Historique créé`,
+          historyId: history._id,
+          prompt: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '')
+        });
       } else {
         history.providerUsed = selectedProviderName;
         history.status = "pending";
         history.errorMessage = null;
         await history.save();
+        
+        sendLog('history_updated', { 
+          message: `📝 Historique mis à jour pour ${selectedProviderName}`,
+          provider: selectedProviderName 
+        });
       }
 
-      await logStep(history._id, `🔄 Tentative ${attempt + 1} avec ${selectedProviderName}`);
+      sendLog('generation_start', { 
+        message: `🎨 Début de la génération avec ${selectedProviderName}`,
+        provider: selectedProviderName,
+        attempt: attempt + 1
+      });
 
       try {
         const result = await generateImage(
@@ -86,17 +139,31 @@ export const createImage = async (req, res) => {
           { $inc: { usageCount: 1 } }
         );
 
-        await logStep(history._id, `✅ Image générée avec ${selectedProviderName}`);
+        sendLog('generation_success', { 
+          message: `✅ Image générée avec succès!`,
+          provider: selectedProviderName,
+          imageUrl: result.imageUrl,
+          historyId: history._id
+        });
 
         success = true;
-        return res.status(201).json({
-          message: `Image générée avec succès en utilisant ${selectedProviderName}`,
-          data: history,
-          providerTransitions,
-          preferredProvider,
-          providerUsed: selectedProviderName,
-          historyId: history._id,
-        });
+        
+        // Envoi du résultat final
+        res.write(`data: ${JSON.stringify({
+          step: 'end',
+          success: true,
+          data: {
+            message: `Image générée avec succès en utilisant ${selectedProviderName}`,
+            data: history,
+            providerTransitions,
+            preferredProvider,
+            providerUsed: selectedProviderName,
+            historyId: history._id,
+          }
+        })}\n\n`);
+        
+        return res.end();
+        
       } catch (generationError) {
         console.error(`Échec avec ${selectedProviderName}:`, generationError.message);
         lastError = generationError;
@@ -104,36 +171,76 @@ export const createImage = async (req, res) => {
         history.errorMessage = generationError.message;
         await history.save();
 
-        await logStep(history._id, `❌ Échec avec ${selectedProviderName}: ${generationError.message}`);
+        sendLog('generation_failed', { 
+          message: `❌ Échec avec ${selectedProviderName}`,
+          provider: selectedProviderName,
+          error: generationError.message,
+          attempt: attempt + 1
+        });
+
+        // Si ce n'est pas la dernière tentative, on continue
+        if (attempt < MAX_RETRIES - 1) {
+          sendLog('retry', { 
+            message: `🔄 Préparation de la tentative suivante...`,
+            nextAttempt: attempt + 2
+          });
+        }
       }
     }
 
     if (!success) {
       const finalMessage = `Échec après ${attemptedProviders.length} tentative(s).`;
-      await logStep(history?._id, `⛔ Fin de la génération: ${finalMessage}`);
-      return res.status(500).json({
-        message: finalMessage,
-        error: lastError?.message || "Tous les fournisseurs ont échoué.",
+      sendLog('final_failure', { 
+        message: `⛔ ${finalMessage}`,
         attemptedProviders,
-        historyId: history ? history._id : null,
-        preferredProvider,
+        error: lastError?.message || "Tous les fournisseurs ont échoué."
       });
+
+      res.write(`data: ${JSON.stringify({
+        step: 'end',
+        success: false,
+        error: {
+          message: finalMessage,
+          error: lastError?.message || "Tous les fournisseurs ont échoué.",
+          attemptedProviders,
+          historyId: history ? history._id : null,
+          preferredProvider,
+        }
+      })}\n\n`);
+      
+      res.end();
     }
   } catch (error) {
     console.error("Erreur inattendue:", error);
+    
+    sendLog('unexpected_error', { 
+      message: `💥 Erreur serveur inattendue`,
+      error: error.message
+    });
+
     if (history && history.status === "pending") {
       history.status = "failed";
       history.errorMessage = "Erreur serveur inattendue.";
       try {
         await history.save();
-        await logStep(history._id, `❌ Erreur serveur inattendue: ${error.message}`);
       } catch (saveError) {
         console.error("Erreur lors de la sauvegarde du statut échoué:", saveError);
       }
     }
-    res.status(500).json({ message: "Erreur serveur interne", error: error.message });
+    
+    res.write(`data: ${JSON.stringify({
+      step: 'end',
+      success: false,
+      error: { 
+        message: "Erreur serveur interne", 
+        error: error.message 
+      }
+    })}\n\n`);
+    
+    res.end();
   }
 };
+
 
 
 // @desc    Get image generation history for the logged-in user
