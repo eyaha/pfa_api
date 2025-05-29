@@ -363,7 +363,56 @@ export const getDashboardStats = async (userId) => {
     providerUsage,
   };
 };
+export const deleteImageHistory = async (req, res) => {
+  const { id } = req.params;
 
+  try {
+    const history = await ImageHistory.findById(id);
+    if (!history) {
+      return res.status(404).json({ message: "Historique non trouvé" });
+    }
+
+    // Facultatif : tu peux vérifier que l'utilisateur est le propriétaire
+    if (history.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Non autorisé" });
+    }
+
+    await ImageHistory.findByIdAndDelete(id);
+    res.status(200).json({ message: "Historique supprimé avec succès" });
+  } catch (error) {
+    console.error("Erreur suppression:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+export const regenerateImage = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const history = await ImageHistory.findById(id);
+    if (!history) {
+      return res.status(404).json({ message: "Historique non trouvé" });
+    }
+
+    await logStep(id, "🔁 Régénération demandée");
+
+    const result = await generateImage(history.providerUsed, history.prompt, history.parameters);
+
+    history.imageUrl = result.imageUrl;
+    history.status = "completed";
+    history.createdAt = new Date();
+    await history.save();
+
+    await logStep(id, "✅ Image régénérée avec succès");
+
+    return res.status(200).json({
+      message: "Image régénérée",
+      data: history,
+    });
+  } catch (error) {
+    console.error("Erreur régénération:", error);
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+};
 // Need to import mongoose for ObjectId validation
 import mongoose from "mongoose";
 import User from "../models/userModel.js";import { logStep } from "../models/GenerationLog.js";

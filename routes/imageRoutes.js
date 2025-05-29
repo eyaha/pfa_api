@@ -3,7 +3,9 @@ import {
   createImage,
   getImageHistory,
   getImageHistoryDetail,
-  getDashboardStats
+  getDashboardStats,
+  deleteImageHistory,
+  regenerateImage
 } from "../controllers/imageController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -14,7 +16,7 @@ router.use(protect);
 
 // Route to generate a new image
 router.post("/generate", createImage);
-
+router.post("/history/:id/regenerate", regenerateImage);
 // Route to get the user's image generation history (paginated)
 router.get("/history", getImageHistory);
 router.get('/dashboard', async (req, res) => {
@@ -30,6 +32,6 @@ router.get('/dashboard', async (req, res) => {
 
 // Route to get details of a specific history record
 router.get("/history/:id", getImageHistoryDetail);
-
+router.delete("/history/:id", deleteImageHistory);
 export default router;
 
