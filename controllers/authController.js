@@ -5,7 +5,9 @@ import { loginSchema, registerSchema, verifyCodeSchema } from '../schemas/authSc
 import { sendResetCodeEmail } from '../utils/emailSender.js';
 
 export const register = async (req, res) => {
-  const { fullName, email, password } = req.body;
+// register.js
+const { fullName, email, password, role = "user" } = req.body;
+
   const { error } = registerSchema.validate({ fullName, email, password }, { abortEarly: false });
   if (error) {
     const formattedErrors = error.details.map((err) => ({
@@ -38,7 +40,8 @@ export const register = async (req, res) => {
         },
       });
     }
-    const user = await User.create({ fullName, email, password });
+const user = await User.create({ fullName, email, password, role });
+
 
     return res.status(201).json({
       success: true,
@@ -47,6 +50,7 @@ export const register = async (req, res) => {
         id: user._id,
         email: user.email,
         fullName: user.fullName,
+        role: user.role,
       },
     });
   } catch (err) {

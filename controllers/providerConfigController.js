@@ -43,6 +43,35 @@ export const checkSingleProviderStatus = async (req, res) => {
         res.status(500).json({ message: "Erreur serveur lors de la vérification du statut", error: error.message });
     }
 };
+// @desc    Update provider API key
+// @route   PATCH /api/providers/:name/api-key
+// @access  Private (Admin only recommandé)
+export const updateProviderApiKey = async (req, res) => {
+  const { name } = req.params;
+  const { newApiKey } = req.body;
+
+  if (!newApiKey) {
+    return res.status(400).json({ message: "La nouvelle clé API est requise." });
+  }
+
+  try {
+    const provider = await ProviderConfig.findOne({ name });
+    
+    if (!provider) {
+      return res.status(404).json({ message: "Fournisseur non trouvé." });
+    }
+    
+    provider.apiKeyEnvVarValue = newApiKey; // ou apiKey selon ton modèle
+    console.log("provider", provider.apiKeyEnvVarValue);
+    await provider.save();
+    console.log("provider" , provider);
+
+    res.json({ message: "Clé API mise à jour avec succès." });
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour de la clé API:", error);
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
+};
 
 // NOTE: Add, Update, Delete routes would typically require Admin privileges
 // and are omitted here for simplicity, but would follow a similar pattern.

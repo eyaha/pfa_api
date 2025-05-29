@@ -3,6 +3,7 @@ import {
   getAllProviderConfigs,
   getProviderConfigByName,
   checkSingleProviderStatus,
+  updateProviderApiKey
   // Import admin-only functions if/when implemented
 } from "../controllers/providerConfigController.js";
 import { protect } from "../middlewares/authMiddleware.js";
@@ -22,7 +23,7 @@ router.get("/:name", getProviderConfigByName);
 
 // Route to check the status of a specific provider
 router.get("/:name/status", checkSingleProviderStatus);
-
+router.patch('/:name/api-key', updateProviderApiKey); 
 // Admin-only routes (Example structure)
 // router.post("/", protect, admin, addProviderConfig);
 // router.put("/:name", protect, admin, updateProviderConfig);
