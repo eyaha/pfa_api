@@ -363,6 +363,45 @@ export const getDashboardStats = async (userId) => {
     providerUsage,
   };
 };
+export const getDashboardStatsAdmin = async () => {
+  const history = await ImageHistory.find({});
+  const providers = await ProviderConfig.find();
+
+  const totalImages = history.length;
+
+  const providerUsage = {};
+  history.forEach((item) => {
+    const provider = item.providerUsed || "unknown";
+    providerUsage[provider] = (providerUsage[provider] || 0) + 1;
+  });
+
+  const formattedProviders = providers.map((p) => {
+    const usageCount = p.usageCount || 0;
+
+    // Détermine le quota max depuis quotaLimit (requests OU credits)
+    const maxDailyRequests =
+      p.quotaLimit?.requests ?? p.quotaLimit?.credits ?? 100;
+
+    const requestsRemaining = Math.max(maxDailyRequests - usageCount, 0);
+
+    return {
+      id: p.name,
+      name: p.displayName,
+      isActive: p.isActive,
+      isAvailable: requestsRemaining > 0,
+      requestsRemaining,
+      maxDailyRequests,
+      usageCount,
+    };
+  });
+
+  return {
+    totalImages,
+    history,
+    providers: formattedProviders,
+    providerUsage,
+  };
+};
 export const deleteImageHistory = async (req, res) => {
   const { id } = req.params;
 
