@@ -30,13 +30,18 @@ export const createImage = async (req, res) => {
   });
 
   // Fonction pour envoyer des logs en temps réel
-  const sendLog = (step, data = {}) => {
+  // Ajoute cette fonction en haut, juste avant createImage
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Modifie sendLog pour être async et attendre un peu après l’envoi
+  const sendLog = async (step, data = {}) => {
     const logData = {
       step,
       timestamp: new Date().toISOString(),
       ...data,
     };
     res.write(`data: ${JSON.stringify(logData)}\n\n`);
+    await sleep(100); // pause de 100ms (ajuste selon besoin)
   };
 
   let history = null;
@@ -45,7 +50,7 @@ export const createImage = async (req, res) => {
   let success = false;
 
   try {
-    sendLog("start", { message: "🚀 Start of image generation", prompt });
+    await sendLog("start", { message: "🚀 Start of image generation", prompt });
 
     const user = await User.findById(userId);
     if (!user) {
@@ -54,14 +59,14 @@ export const createImage = async (req, res) => {
       return res.end();
     }
 
-    sendLog("user_found", { message: "👤 User found", userId });
+    await sendLog("user_found", { message: "👤 User found", userId });
 
     const userPreferences = user.preferences;
     const preferredProvider = userPreferences?.preferredProvider || null;
     let providerTransitions = [];
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      sendLog("provider_selection", {
+      await sendLog("provider_selection", {
         message: `🔍 Selection of provider (attempt ${
           attempt + 1
         }/${MAX_RETRIES})`,
@@ -75,7 +80,7 @@ export const createImage = async (req, res) => {
 
       if (!selectedProviderConfig) {
         lastError = new Error("No suitable provider available after attempts.");
-        sendLog("no_provider", {
+        await sendLog("no_provider", {
           message: `⛔ No provider available after ${attempt + 1} attempts`,
           attemptedProviders,
         });
@@ -88,7 +93,7 @@ export const createImage = async (req, res) => {
         `Attempt ${attempt + 1}: ${selectedProviderName}`
       );
 
-      sendLog("provider_selected", {
+      await sendLog("provider_selected", {
         message: `🎯 Selected Provider: ${selectedProviderName}`,
         provider: selectedProviderName,
         attempt: attempt + 1,
@@ -104,7 +109,7 @@ export const createImage = async (req, res) => {
         });
         await history.save();
 
-        sendLog("history_created", {
+        await sendLog("history_created", {
           message: `📝 History created`,
           historyId: history._id,
           prompt: prompt.substring(0, 50) + (prompt.length > 50 ? "..." : ""),
@@ -115,13 +120,13 @@ export const createImage = async (req, res) => {
         history.errorMessage = null;
         await history.save();
 
-        sendLog("history_updated", {
+        await sendLog("history_updated", {
           message: `📝 History updated ${selectedProviderName}`,
           provider: selectedProviderName,
         });
       }
 
-      sendLog("generation_start", {
+      await sendLog("generation_start", {
         message: `🎨 Start of generation with ${selectedProviderName}`,
         provider: selectedProviderName,
         attempt: attempt + 1,
@@ -143,7 +148,7 @@ export const createImage = async (req, res) => {
           { $inc: { usageCount: 1 } }
         );
 
-        sendLog("generation_success", {
+        await sendLog("generation_success", {
           message: `✅ Image generated successfully!`,
           provider: selectedProviderName,
           imageUrl: result.imageUrl,
@@ -179,7 +184,7 @@ export const createImage = async (req, res) => {
         history.errorMessage = generationError.message;
         await history.save();
 
-        sendLog("generation_failed", {
+        await sendLog("generation_failed", {
           message: `❌ Image generation failed with ${selectedProviderName}`,
           provider: selectedProviderName,
           error: generationError.message,
@@ -188,7 +193,7 @@ export const createImage = async (req, res) => {
 
         // Si ce n'est pas la dernière tentative, on continue
         if (attempt < MAX_RETRIES - 1) {
-          sendLog("retry", {
+          await sendLog("retry", {
             message: `🔄 Preparing for the next attempt...`,
             nextAttempt: attempt + 2,
           });
@@ -198,7 +203,7 @@ export const createImage = async (req, res) => {
 
     if (!success) {
       const finalMessage = `Failure after ${attemptedProviders.length} attempt(s).`;
-      sendLog("final_failure", {
+      await sendLog("final_failure", {
         message: `⛔ ${finalMessage}`,
         attemptedProviders,
         error: lastError?.message || "All providers failed.",
@@ -223,7 +228,7 @@ export const createImage = async (req, res) => {
   } catch (error) {
     console.error("Unexpected error:", error);
 
-    sendLog("unexpected_error", {
+    await sendLog("unexpected_error", {
       message: `💥 Unexpected server error`,
       error: error.message,
     });
