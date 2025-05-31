@@ -7,19 +7,21 @@ export const getAllUsers = async (req, res) => {
     );
     return res.status(200).json({ users });
   } catch (err) {
-    console.error("Erreur récupération utilisateurs :", err);
-    return res.status(500).json({ message: "Erreur serveur" });
+    console.error("Error fetching users:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
 export const deleteUser = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true });
   } catch (err) {
-    console.error("Erreur récupération utilisateurs :", err);
-    return res.status(500).json({ message: "Erreur serveur" });
+    console.error("Error deleting user:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
 export async function getImagesByUser(userId) {
   try {
     const images = await ImageHistory.find({ user: userId }).select(
@@ -27,7 +29,7 @@ export async function getImagesByUser(userId) {
     );
     return images;
   } catch (err) {
-    console.error("Erreur récupération images :", err);
-    throw new Error("Erreur lors de la récupération des images.");
+    console.error("Error fetching images:", err);
+    throw new Error("Error retrieving images.");
   }
 }

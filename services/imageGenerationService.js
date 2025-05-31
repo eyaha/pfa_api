@@ -275,8 +275,8 @@ export async function generateWithPhotAI(prompt, parameters = {}) {
 
     return await pollForResult();
   } catch (error) {
-    console.error("❌ Erreur generateWithPhotAI :", error.response ? error.response.data : error.message);
-    throw new Error(`Erreur PhotAI : ${error.message}`);
+    console.error("❌ Error generateWithPhotAI :", error.response ? error.response.data : error.message);
+    throw new Error(`Error PhotAI : ${error.message}`);
   }
 }
 // Main entry point
@@ -291,13 +291,13 @@ export const generateImage = async (provider, prompt, parameters) => {
     case "photai":
       return generateWithPhotAI(prompt, parameters);
     default:
-      throw new Error(`Fournisseur non supporté: ${provider}`);
+      throw new Error(`Provider not supported: ${provider}`);
   }
 };
 
 // Check provider status
 export const checkProviderStatus = async (providerName) => {
-  console.log(`Vérification du statut pour ${providerName}...`);
+  console.log(`⏳ Checking status for ${providerName}...`);
   await new Promise(resolve => setTimeout(resolve, 50));
 
   try {

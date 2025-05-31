@@ -7,10 +7,10 @@ import { checkProviderStatus } from "../services/imageGenerationService.js";
 export const getAllProviderConfigs = async (req, res) => {
   try {
     const providers = await ProviderConfig.find({}).select("-apiKeyEnvVar"); // Exclude sensitive info
-    res.json({ message: "Configurations des fournisseurs récupérées", data: providers });
+    res.json({ message: "Provider configurations retrieved", data: providers });
   } catch (error) {
-    console.error("Erreur lors de la récupération des configurations fournisseur:", error);
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
+    console.error("Error retrieving provider configurations:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -21,12 +21,12 @@ export const getProviderConfigByName = async (req, res) => {
   try {
     const provider = await ProviderConfig.findOne({ name: req.params.name }).select("-apiKeyEnvVar");
     if (!provider) {
-      return res.status(404).json({ message: "Configuration fournisseur non trouvée" });
+      return res.status(404).json({ message: "Provider configuration not found" });
     }
-    res.json({ message: "Configuration fournisseur récupérée", data: provider });
+    res.json({ message: "Provider configuration retrieved", data: provider });
   } catch (error) {
-    console.error("Erreur lors de la récupération de la configuration fournisseur:", error);
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
+    console.error("Error retrieving provider configuration:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -34,42 +34,43 @@ export const getProviderConfigByName = async (req, res) => {
 // @route   GET /api/providers/:name/status
 // @access  Private
 export const checkSingleProviderStatus = async (req, res) => {
-    try {
-        const providerName = req.params.name;
-        const status = await checkProviderStatus(providerName);
-        res.json({ message: `Statut pour ${providerName}`, data: status });
-    } catch (error) {
-        console.error(`Erreur lors de la vérification du statut pour ${req.params.name}:`, error);
-        res.status(500).json({ message: "Erreur serveur lors de la vérification du statut", error: error.message });
-    }
+  try {
+    const providerName = req.params.name;
+    const status = await checkProviderStatus(providerName);
+    res.json({ message: `Status for ${providerName}`, data: status });
+  } catch (error) {
+    console.error(`Error checking status for ${req.params.name}:`, error);
+    res.status(500).json({ message: "Server error while checking status", error: error.message });
+  }
 };
+
 // @desc    Update provider API key
 // @route   PATCH /api/providers/:name/api-key
-// @access  Private (Admin only recommandé)
+// @access  Private (Admin only recommended)
 export const updateProviderApiKey = async (req, res) => {
   const { name } = req.params;
   const { newApiKey } = req.body;
 
   if (!newApiKey) {
-    return res.status(400).json({ message: "La nouvelle clé API est requise." });
+    return res.status(400).json({ message: "The new API key is required." });
   }
 
   try {
     const provider = await ProviderConfig.findOne({ name });
     
     if (!provider) {
-      return res.status(404).json({ message: "Fournisseur non trouvé." });
+      return res.status(404).json({ message: "Provider not found." });
     }
     
-    provider.apiKeyEnvVarValue = newApiKey; // ou apiKey selon ton modèle
+    provider.apiKeyEnvVarValue = newApiKey; // or apiKey depending on your model
     console.log("provider", provider.apiKeyEnvVarValue);
     await provider.save();
-    console.log("provider" , provider);
+    console.log("provider", provider);
 
-    res.json({ message: "Clé API mise à jour avec succès." });
+    res.json({ message: "API key updated successfully." });
   } catch (error) {
-    console.error("Erreur lors de la mise à jour de la clé API:", error);
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
+    console.error("Error updating API key:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -91,4 +92,3 @@ export const updateProviderConfig = async (req, res) => { ... };
 // @access  Admin
 export const deleteProviderConfig = async (req, res) => { ... };
 */
-

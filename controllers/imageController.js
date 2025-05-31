@@ -17,16 +17,16 @@ export const createImage = async (req, res) => {
   const userId = req.user.id;
 
   if (!prompt) {
-    return res.status(400).json({ message: "Le prompt est requis" });
+    return res.status(400).json({ message: "The prompt is required" });
   }
 
   // Configuration SSE
   res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Cache-Control'
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Cache-Control",
   });
 
   // Fonction pour envoyer des logs en temps réel
@@ -34,7 +34,7 @@ export const createImage = async (req, res) => {
     const logData = {
       step,
       timestamp: new Date().toISOString(),
-      ...data
+      ...data,
     };
     res.write(`data: ${JSON.stringify(logData)}\n\n`);
   };
@@ -45,25 +45,27 @@ export const createImage = async (req, res) => {
   let success = false;
 
   try {
-    sendLog('start', { message: '🚀 Début de la génération d\'image', prompt });
+    sendLog("start", { message: "🚀 Start of image generation", prompt });
 
     const user = await User.findById(userId);
     if (!user) {
-      sendLog('error', { message: 'Utilisateur non trouvé' });
-      res.write(`data: ${JSON.stringify({ step: 'end', success: false })}\n\n`);
+      sendLog("error", { message: "User not found" });
+      res.write(`data: ${JSON.stringify({ step: "end", success: false })}\n\n`);
       return res.end();
     }
 
-    sendLog('user_found', { message: '👤 Utilisateur trouvé', userId });
+    sendLog("user_found", { message: "👤 User found", userId });
 
     const userPreferences = user.preferences;
     const preferredProvider = userPreferences?.preferredProvider || null;
     let providerTransitions = [];
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      sendLog('provider_selection', { 
-        message: `🔍 Sélection du fournisseur (tentative ${attempt + 1}/${MAX_RETRIES})`,
-        attempt: attempt + 1 
+      sendLog("provider_selection", {
+        message: `🔍 Selection of provider (attempt ${
+          attempt + 1
+        }/${MAX_RETRIES})`,
+        attempt: attempt + 1,
       });
 
       const selectedProviderConfig = await selectProvider(
@@ -72,22 +74,24 @@ export const createImage = async (req, res) => {
       );
 
       if (!selectedProviderConfig) {
-        lastError = new Error("Aucun fournisseur approprié disponible après tentatives.");
-        sendLog('no_provider', { 
-          message: `⛔ Aucun fournisseur disponible après ${attempt + 1} tentatives`,
-          attemptedProviders 
+        lastError = new Error("No suitable provider available after attempts.");
+        sendLog("no_provider", {
+          message: `⛔ No provider available after ${attempt + 1} attempts`,
+          attemptedProviders,
         });
         break;
       }
 
       const selectedProviderName = selectedProviderConfig.name;
       attemptedProviders.push(selectedProviderName);
-      providerTransitions.push(`Tentative ${attempt + 1}: ${selectedProviderName}`);
+      providerTransitions.push(
+        `Attempt ${attempt + 1}: ${selectedProviderName}`
+      );
 
-      sendLog('provider_selected', { 
-        message: `🎯 Fournisseur sélectionné: ${selectedProviderName}`,
+      sendLog("provider_selected", {
+        message: `🎯 Selected Provider: ${selectedProviderName}`,
         provider: selectedProviderName,
-        attempt: attempt + 1
+        attempt: attempt + 1,
       });
 
       if (!history) {
@@ -99,28 +103,28 @@ export const createImage = async (req, res) => {
           status: "pending",
         });
         await history.save();
-        
-        sendLog('history_created', { 
-          message: `📝 Historique créé`,
+
+        sendLog("history_created", {
+          message: `📝 History created`,
           historyId: history._id,
-          prompt: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '')
+          prompt: prompt.substring(0, 50) + (prompt.length > 50 ? "..." : ""),
         });
       } else {
         history.providerUsed = selectedProviderName;
         history.status = "pending";
         history.errorMessage = null;
         await history.save();
-        
-        sendLog('history_updated', { 
-          message: `📝 Historique mis à jour pour ${selectedProviderName}`,
-          provider: selectedProviderName 
+
+        sendLog("history_updated", {
+          message: `📝 History updated ${selectedProviderName}`,
+          provider: selectedProviderName,
         });
       }
 
-      sendLog('generation_start', { 
-        message: `🎨 Début de la génération avec ${selectedProviderName}`,
+      sendLog("generation_start", {
+        message: `🎨 Start of generation with ${selectedProviderName}`,
         provider: selectedProviderName,
-        attempt: attempt + 1
+        attempt: attempt + 1,
       });
 
       try {
@@ -139,109 +143,118 @@ export const createImage = async (req, res) => {
           { $inc: { usageCount: 1 } }
         );
 
-        sendLog('generation_success', { 
-          message: `✅ Image générée avec succès!`,
+        sendLog("generation_success", {
+          message: `✅ Image generated successfully!`,
           provider: selectedProviderName,
           imageUrl: result.imageUrl,
-          historyId: history._id
+          historyId: history._id,
         });
 
         success = true;
-        
+
         // Envoi du résultat final
-        res.write(`data: ${JSON.stringify({
-          step: 'end',
-          success: true,
-          data: {
-            message: `Image générée avec succès en utilisant ${selectedProviderName}`,
-            data: history,
-            providerTransitions,
-            preferredProvider,
-            providerUsed: selectedProviderName,
-            historyId: history._id,
-          }
-        })}\n\n`);
-        
+        res.write(
+          `data: ${JSON.stringify({
+            step: "end",
+            success: true,
+            data: {
+              message: `Image generated successfully with ${selectedProviderName}`,
+              data: history,
+              providerTransitions,
+              preferredProvider,
+              providerUsed: selectedProviderName,
+              historyId: history._id,
+            },
+          })}\n\n`
+        );
+
         return res.end();
-        
       } catch (generationError) {
-        console.error(`Échec avec ${selectedProviderName}:`, generationError.message);
+        console.error(
+          `Error generating image with ${selectedProviderName}:`,
+          generationError.message
+        );
         lastError = generationError;
         history.status = "failed";
         history.errorMessage = generationError.message;
         await history.save();
 
-        sendLog('generation_failed', { 
-          message: `❌ Échec avec ${selectedProviderName}`,
+        sendLog("generation_failed", {
+          message: `❌ Image generation failed with ${selectedProviderName}`,
           provider: selectedProviderName,
           error: generationError.message,
-          attempt: attempt + 1
+          attempt: attempt + 1,
         });
 
         // Si ce n'est pas la dernière tentative, on continue
         if (attempt < MAX_RETRIES - 1) {
-          sendLog('retry', { 
-            message: `🔄 Préparation de la tentative suivante...`,
-            nextAttempt: attempt + 2
+          sendLog("retry", {
+            message: `🔄 Preparing for the next attempt...`,
+            nextAttempt: attempt + 2,
           });
         }
       }
     }
 
     if (!success) {
-      const finalMessage = `Échec après ${attemptedProviders.length} tentative(s).`;
-      sendLog('final_failure', { 
+      const finalMessage = `Failure after ${attemptedProviders.length} attempt(s).`;
+      sendLog("final_failure", {
         message: `⛔ ${finalMessage}`,
         attemptedProviders,
-        error: lastError?.message || "Tous les fournisseurs ont échoué."
+        error: lastError?.message || "All providers failed.",
       });
 
-      res.write(`data: ${JSON.stringify({
-        step: 'end',
-        success: false,
-        error: {
-          message: finalMessage,
-          error: lastError?.message || "Tous les fournisseurs ont échoué.",
-          attemptedProviders,
-          historyId: history ? history._id : null,
-          preferredProvider,
-        }
-      })}\n\n`);
-      
+      res.write(
+        `data: ${JSON.stringify({
+          step: "end",
+          success: false,
+          error: {
+            message: finalMessage,
+            error: lastError?.message || "All providers failed.",
+            attemptedProviders,
+            historyId: history ? history._id : null,
+            preferredProvider,
+          },
+        })}\n\n`
+      );
+
       res.end();
     }
   } catch (error) {
-    console.error("Erreur inattendue:", error);
-    
-    sendLog('unexpected_error', { 
-      message: `💥 Erreur serveur inattendue`,
-      error: error.message
+    console.error("Unexpected error:", error);
+
+    sendLog("unexpected_error", {
+      message: `💥 Unexpected server error`,
+      error: error.message,
     });
 
     if (history && history.status === "pending") {
       history.status = "failed";
-      history.errorMessage = "Erreur serveur inattendue.";
+      history.errorMessage = "Unexpected server error.";
       try {
         await history.save();
       } catch (saveError) {
-        console.error("Erreur lors de la sauvegarde du statut échoué:", saveError);
+        console.error(
+          "Erreur lors de la sauvegarde du statut échoué:",
+          saveError
+        );
       }
     }
-    
-    res.write(`data: ${JSON.stringify({
-      step: 'end',
-      success: false,
-      error: { 
-        message: "Erreur serveur interne", 
-        error: error.message 
-      }
-    })}\n\n`);
-    
+
+    res.write(
+      `data: ${JSON.stringify({
+        step: "end",
+        success: false,
+        error: {
+          message: "Internal server error",
+          error: error.message,
+        },
+      })}\n\n`
+    );
+
     res.end();
   }
 };
-
-
 
 // @desc    Get image generation history for the logged-in user
 // @route   GET /api/images/history
@@ -270,20 +283,18 @@ export const getImageHistory = async (req, res) => {
     ]);
 
     res.json({
-      message: "Historique récupéré avec succès",
+      message: "History retrieved successfully",
       data: history,
       totalPages: Math.ceil(totalCount / options.limit),
       currentPage: options.page,
       totalCount: totalCount,
     });
   } catch (error) {
-    console.error("Erreur lors de la récupération de l'historique:", error);
-    res
-      .status(500)
-      .json({
-        message: "Erreur serveur lors de la récupération de l'historique",
-        error: error.message,
-      });
+    console.error("Error retrieving history:", error);
+    res.status(500).json({
+      message: "Server error while fetching history",
+      error: error.message,
+    });
   }
 };
 
@@ -297,30 +308,24 @@ export const getImageHistoryDetail = async (req, res) => {
   try {
     // Ensure the ID is valid before querying
     if (!mongoose.Types.ObjectId.isValid(historyId)) {
-      return res.status(400).json({ message: "ID d'historique invalide" });
+      return res.status(400).json({ message: "Invalid history ID" });
     }
 
     const record = await ImageHistory.findOne({ _id: historyId, user: userId });
 
     if (!record) {
-      return res
-        .status(404)
-        .json({
-          message:
-            "Enregistrement d'historique non trouvé ou accès non autorisé",
-        });
+      return res.status(404).json({
+        message: "History record not found or access denied",
+      });
     }
 
     res.json({
-      message: "Détail de l'historique récupéré avec succès",
+      message: "History record retrieved successfully",
       data: record,
     });
   } catch (error) {
-    console.error(
-      "Erreur lors de la récupération du détail de l'historique:",
-      error
-    );
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
+    console.error("Error retrieving history record:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -408,19 +413,19 @@ export const deleteImageHistory = async (req, res) => {
   try {
     const history = await ImageHistory.findById(id);
     if (!history) {
-      return res.status(404).json({ message: "Historique non trouvé" });
+      return res.status(404).json({ message: "History not found" });
     }
 
     // Facultatif : tu peux vérifier que l'utilisateur est le propriétaire
     if (history.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Non autorisé" });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     await ImageHistory.findByIdAndDelete(id);
-    res.status(200).json({ message: "Historique supprimé avec succès" });
+    res.status(200).json({ message: "History deleted successfully" });
   } catch (error) {
-    console.error("Erreur suppression:", error);
-    res.status(500).json({ message: "Erreur serveur" });
+    console.error("Error deleting history:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 export const regenerateImage = async (req, res) => {
@@ -429,30 +434,37 @@ export const regenerateImage = async (req, res) => {
   try {
     const history = await ImageHistory.findById(id);
     if (!history) {
-      return res.status(404).json({ message: "Historique non trouvé" });
+      return res.status(404).json({ message: "History not found" });
     }
 
-    await logStep(id, "🔁 Régénération demandée");
+    await logStep(id, "🔁 Regeneration requested");
 
-    const result = await generateImage(history.providerUsed, history.prompt, history.parameters);
-
+    const result = await generateImage(
+      history.providerUsed,
+      history.prompt,
+      history.parameters
+    );
+    await ProviderConfig.updateOne(
+      { name: history.providerUsed },
+      { $inc: { usageCount: 1 } }
+    );
     history.imageUrl = result.imageUrl;
     history.status = "completed";
     history.createdAt = new Date();
     await history.save();
 
-    await logStep(id, "✅ Image régénérée avec succès");
+    await logStep(id, "✅ Image successfully regenerated");
 
     return res.status(200).json({
-      message: "Image régénérée",
+      message: "Image successfully regenerated",
       data: history,
     });
   } catch (error) {
-    console.error("Erreur régénération:", error);
-    return res.status(500).json({ message: "Erreur serveur" });
+    console.error("Error regenerating image:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 // Need to import mongoose for ObjectId validation
 import mongoose from "mongoose";
-import User from "../models/userModel.js";import { logStep } from "../models/GenerationLog.js";
-
+import User from "../models/userModel.js";
+import { logStep } from "../models/GenerationLog.js";
