@@ -22,24 +22,6 @@ services:
       # Pour le développement
       - .:/app
       - /app/node_modules
-    depends_on:
-      - mongodb
-    networks:
-      - app-network
-    restart: unless-stopped
-
-  # Base de données MongoDB
-  mongodb:
-    image: mongo:7.0
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: ${DB_NAME}
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
       - app-network
     restart: unless-stopped
@@ -47,6 +29,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  mongodb_data:
