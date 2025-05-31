@@ -5,7 +5,8 @@ import { loginSchema, registerSchema, verifyCodeSchema } from '../schemas/authSc
 import { sendResetCodeEmail } from '../utils/emailSender.js';
 
 export const register = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, role = "user" } = req.body;
+
   const { error } = registerSchema.validate({ fullName, email, password }, { abortEarly: false });
   if (error) {
     const formattedErrors = error.details.map((err) => ({
@@ -30,7 +31,7 @@ export const register = async (req, res) => {
           details: {
             errors: [
               {
-                message: "Email déjà utilisé",
+                message: "Email already in use",
                 path: ["email"],
               },
             ],
@@ -38,15 +39,17 @@ export const register = async (req, res) => {
         },
       });
     }
-    const user = await User.create({ fullName, email, password });
+
+    const user = await User.create({ fullName, email, password, role });
 
     return res.status(201).json({
       success: true,
-      message: "Utilisateur inscrit avec succès",
+      message: "User registered successfully",
       user: {
         id: user._id,
         email: user.email,
         fullName: user.fullName,
+        role: user.role,
       },
     });
   } catch (err) {
@@ -56,7 +59,7 @@ export const register = async (req, res) => {
         details: {
           errors: [
             {
-              message: "Erreur serveur",
+              message: "Server error",
               path: ["toast"],
             },
           ],
@@ -92,7 +95,7 @@ export const login = async (req, res) => {
           details: {
             errors: [
               {
-                message: "Email ou mot de passe incorrect",
+                message: "Incorrect email or password",
                 path: ["toast"],
               },
             ],
@@ -123,7 +126,6 @@ export const login = async (req, res) => {
           fullName: user.fullName,
         },
       });
-
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({
@@ -131,7 +133,7 @@ export const login = async (req, res) => {
         details: {
           errors: [
             {
-              message: "Erreur serveur",
+              message: "Server error",
               path: ["toast"],
             },
           ],
@@ -147,7 +149,7 @@ export const refresh = async (req, res) => {
   if (!token) {
     return res.status(401).json({
       success: false,
-      message: "Aucun token fourni",
+      message: "No token provided",
     });
   }
 
@@ -158,7 +160,7 @@ export const refresh = async (req, res) => {
     if (!user || user.refreshToken !== token) {
       return res.status(403).json({
         success: false,
-        message: "Token invalide ou révoqué",
+        message: "Invalid or revoked token",
       });
     }
 
@@ -169,19 +171,18 @@ export const refresh = async (req, res) => {
       accessToken: newAccessToken,
     });
   } catch (err) {
-    console.error("Erreur lors du refresh token :", err.message);
+    console.error("Refresh token error:", err.message);
     return res.status(403).json({
       success: false,
-      message: "Token invalide ou expiré",
+      message: "Invalid or expired token",
     });
   }
 };
 
-
 export const logout = async (req, res) => {
   try {
     const token = req.cookies.refreshToken;
-    
+
     if (token) {
       try {
         const payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
@@ -199,30 +200,29 @@ export const logout = async (req, res) => {
       })
       .json({ 
         success: true,
-        message: 'Déconnexion réussie' 
+        message: 'Logout successful' 
       });
-
   } catch (err) {
     console.error('Logout error:', err);
     res.status(500).json({ 
       success: false,
-      message: 'Erreur serveur lors de la déconnexion' 
+      message: 'Server error during logout' 
     });
   }
 };
 
 export const requestPasswordReset = async (req, res) => {
   const { email } = req.body;
-  
+
   try {
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(404).json({
         error: {
           details: {
             errors: [{
-              message: "Aucun compte trouvé avec cet email",
+              message: "No account found with that email",
               path: ["email"]
             }]
           }
@@ -230,37 +230,38 @@ export const requestPasswordReset = async (req, res) => {
       });
     }
 
-    // Vérifie si un code existe déjà et n'a pas expiré
+    // Check if a valid code already exists and hasn't expired
     const hasValidCode = user.resetPasswordCode && 
                         user.resetPasswordCodeExpires > Date.now();
 
     if (hasValidCode) {
       return res.status(200).json({
         success: true,
-        message: "Un code valide existe déjà",
-        code: user.resetPasswordCode // Optionnel: pour le développement
+        message: "A valid code already exists",
+        code: user.resetPasswordCode // Optional: for development
       });
     }
 
-    // Génère un nouveau code seulement si nécessaire
+    // Generate a new code only if needed
     const resetCode = generateResetCode();
     user.resetPasswordCode = resetCode;
-    user.resetPasswordCodeExpires = Date.now() + 3600000; // 1h
-    
+    user.resetPasswordCodeExpires = Date.now() + 3600000; // 1 hour
+
     await user.save();
     await sendResetCodeEmail(user.email, resetCode);
+
     res.status(200).json({ 
       success: true,
-      message: 'Code de réinitialisation envoyé'
+      message: 'Reset code sent'
     });
 
   } catch (err) {
-    console.error("Reset request error:", err);
+    console.error("Password reset request error:", err);
     res.status(500).json({
       error: {
         details: {
           errors: [{
-            message: "Erreur serveur",
+            message: "Server error",
             path: ["toast"]
           }]
         }
@@ -268,11 +269,11 @@ export const requestPasswordReset = async (req, res) => {
     });
   }
 };
+
 export const verifyResetCode = async (req, res) => {
   const { email, code } = req.body;
   const { error } = verifyCodeSchema.validate({ email, code }, { abortEarly: false });
 
-  // Validation des données
   if (error) {
     const formattedErrors = error.details.map((err) => ({
       message: err.message,
@@ -288,7 +289,6 @@ export const verifyResetCode = async (req, res) => {
     });
   }
 
-  
   try {
     const user = await User.findOne({ email });
 
@@ -297,7 +297,7 @@ export const verifyResetCode = async (req, res) => {
         error: {
           details: {
             errors: [{
-              message: "Code invalide",
+              message: "Invalid code",
               path: ["code"]
             }]
           }
@@ -310,7 +310,7 @@ export const verifyResetCode = async (req, res) => {
         error: {
           details: {
             errors: [{
-              message: "Code expiré",
+              message: "Code expired",
               path: ["code"]
             }]
           }
@@ -318,7 +318,7 @@ export const verifyResetCode = async (req, res) => {
       });
     }
 
-    // Crée un token temporaire pour l'étape suivante
+    // Create a temporary token for next step
     const tempToken = jwt.sign(
       { email, code },
       process.env.RESET_TOKEN_SECRET,
@@ -328,7 +328,7 @@ export const verifyResetCode = async (req, res) => {
     res.status(200).json({
       success: true,
       tempToken,
-      message: "Code vérifié avec succès"
+      message: "Code verified successfully"
     });
 
   } catch (err) {
@@ -337,7 +337,7 @@ export const verifyResetCode = async (req, res) => {
       error: {
         details: {
           errors: [{
-            message: "Erreur serveur",
+            message: "Server error",
             path: ["toast"]
           }]
         }
@@ -346,7 +346,7 @@ export const verifyResetCode = async (req, res) => {
   }
 };
 
-// Réinitialisation du mot de passe
+// Password reset
 export const resetPassword = async (req, res) => {
   const { tempToken, newPassword } = req.body;
 
@@ -364,7 +364,7 @@ export const resetPassword = async (req, res) => {
         error: {
           details: {
             errors: [{
-              message: "Session invalide",
+              message: "Invalid session",
               path: ["toast"]
             }]
           }
@@ -372,7 +372,7 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Réinitialisation
+    // Reset password
     user.password = newPassword;
     user.resetPasswordCode = undefined;
     user.resetPasswordCodeExpires = undefined;
@@ -380,7 +380,7 @@ export const resetPassword = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Mot de passe mis à jour"
+      message: "Password updated"
     });
 
   } catch (err) {
@@ -389,7 +389,7 @@ export const resetPassword = async (req, res) => {
       error: {
         details: {
           errors: [{
-            message: "Erreur serveur",
+            message: "Server error",
             path: ["toast"]
           }]
         }
@@ -397,6 +397,7 @@ export const resetPassword = async (req, res) => {
     });
   }
 };
+
 export const getEmailByCode = async (req, res) => {
   const { code } = req.params;
   try {
@@ -406,7 +407,7 @@ export const getEmailByCode = async (req, res) => {
         error: {
           details: {
             errors: [{
-              message: "Code invalide",
+              message: "Invalid code",
               path: ["code"]
             }]
           }
@@ -416,19 +417,19 @@ export const getEmailByCode = async (req, res) => {
     res.status(200).json({
       success: true,
       email: user.email,
-      message: "Email trouvé"
-    })
+      message: "Email found"
+    });
   } catch (err) {
     console.error("Email by code error:", err);
     res.status(500).json({
       error: {
         details: {
           errors: [{
-            message: "Erreur serveur",
+            message: "Server error",
             path: ["toast"]
           }]
         }
       }
     });
   }
-}
+};

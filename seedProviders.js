@@ -45,17 +45,17 @@ const seedProviders = async () => {
         costPerRequest: 6, // Si gratuit pour l’instant
         costUnit: 'credits',
       },
-      // {
-      //   name: 'gemini',
-      //   displayName: 'Gemini',
-      //   apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta', // Note : endpoint indicatif, car Gemini utilise SDK
-      //   apiKeyEnvVar: 'GEMINI_API_KEY',
-      //   isFreeTier: true,
-      //   isActive: true,
-      //   quotaLimit: { requests: 10 }, // Exemple : 60 requêtes/min en free tier
-      //   costPerRequest: 0, // Gratuit jusqu’au quota
-      //   costUnit: 'USD',
-      // },
+      {
+        name: 'gemini',
+        displayName: 'Gemini',
+        apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta', // Note : endpoint indicatif, car Gemini utilise SDK
+        apiKeyEnvVar: 'GEMINI_API_KEY',
+        isFreeTier: true,
+        isActive: true,
+        quotaLimit: null, // Exemple : 60 requêtes/min en free tier
+        costPerRequest: 0, // Gratuit jusqu’au quota
+        costUnit: 'USD',
+      },
       {
         name: 'photai',
         displayName: 'Phot.AI',

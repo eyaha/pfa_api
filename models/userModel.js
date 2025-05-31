@@ -14,16 +14,25 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+   role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
   preferences: {
     preferredProvider: {
       type: String,
       enum: ["stablediffusion","kieai","gemini","photai","auto"], // Add more providers as needed
-      default: 'auto',
+      default: 'auto'
     },
     prioritizeFree: {
       type: Boolean,
       default: true,
     },
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
   },
 });
 
