@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"  # Utiliser le port 8080
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      # Variables MongoDB
+      - MONGODB_URI=${MONGODB_URI}
+      - DB_NAME=${DB_NAME}
+      # Variables SendGrid
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      # Autres variables selon vos besoins
+      - JWT_SECRET=${JWT_SECRET}
+    env_file:
+      - .env
+    volumes:
+      # Pour le développement
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Base de données MongoDB
+  mongodb:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DB_NAME}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
