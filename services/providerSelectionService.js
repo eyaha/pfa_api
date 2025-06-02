@@ -4,6 +4,7 @@ import { checkProviderStatus } from "./imageGenerationService.js";
 /**
  * Selects the best available image generation provider based on user preferences,
  * provider status (active, free tier), and availability.
+ * MODIFIED: Includes all providers for testing, even unavailable ones.
  *
  * @param {object} userPreferences - User preferences { preferredProvider: string, prioritizeFree: boolean }
  * @param {Array<string>} attemptedProviders - List of providers already attempted for this request.
@@ -36,7 +37,7 @@ export const selectProvider = async (userPreferences, attemptedProviders = []) =
 
   try {
     // 1. Get all potentially active providers from DB
-    const availableProviders = await ProviderConfig.find({ isActive: true });
+    const availableProviders = await ProviderConfig.find({});
 
     if (!availableProviders || availableProviders.length === 0) {
       console.warn("Aucun fournisseur actif trouvé dans la configuration.");
@@ -72,14 +73,14 @@ export const selectProvider = async (userPreferences, attemptedProviders = []) =
       // Ajout de la disponibilité dans le status
       status.isAvailable = isAvailable;
 
-      // Ajouter seulement si actif ET disponible
-      if (status.isActive && status.isAvailable) {
-        candidates.push({ ...provider.toObject(), ...status });
-      }
+      // MODIFICATION: Ajouter TOUS les fournisseurs (actifs ou non, disponibles ou non)
+      // pour permettre les tests même sur des fournisseurs non disponibles
+      console.log(`[TEST MODE] Inclusion du fournisseur ${provider.name} - Actif: ${status.isActive}, Disponible: ${status.isAvailable}`);
+      candidates.push({ ...provider.toObject(), ...status });
     }
 
     if (candidates.length === 0) {
-      console.log("Aucun fournisseur actif et non tenté trouvé après vérification du statut.");
+      console.log("Aucun fournisseur trouvé après filtrage des déjà tentés.");
       return null;
     }
 
@@ -94,7 +95,7 @@ export const selectProvider = async (userPreferences, attemptedProviders = []) =
         if (prioritizeFree && !preferred.isFreeTier) {
           console.log(`Fournisseur préféré (${preferredProvider}) n'est pas gratuit, recherche d'alternatives gratuites.`);
         } else {
-          console.log(`Sélection du fournisseur préféré : ${preferredProvider}`);
+          console.log(`Sélection du fournisseur préféré : ${preferredProvider} (Actif: ${preferred.isActive}, Disponible: ${preferred.isAvailable})`);
           return preferred;
         }
       }
@@ -105,7 +106,7 @@ export const selectProvider = async (userPreferences, attemptedProviders = []) =
     if (prioritizeFree) {
       potentialSelection = candidates.filter(p => p.isFreeTier);
       if (potentialSelection.length === 0) {
-        console.log("Aucun fournisseur gratuit disponible, prise en compte des fournisseurs payants.");
+        console.log("Aucun fournisseur gratuit disponible, prise en compte de tous les fournisseurs.");
         potentialSelection = candidates;
       }
     } else {
@@ -115,7 +116,7 @@ export const selectProvider = async (userPreferences, attemptedProviders = []) =
     // 3c. Select the first available candidate from the filtered list (already sorted)
     if (potentialSelection.length > 0) {
       const selected = potentialSelection[0];
-      console.log(`Sélection du fournisseur basé sur les préférences/disponibilité : ${selected.name}`);
+      console.log(`Sélection du fournisseur : ${selected.name} (Actif: ${selected.isActive}, Disponible: ${selected.isAvailable})`);
       return selected;
     } else {
       console.log("Aucun fournisseur approprié trouvé après application des filtres.");
